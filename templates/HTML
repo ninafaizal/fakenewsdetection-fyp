@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detector</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI';
+            background-color: #e9f3f4;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+        .header {
+            text-align: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #3a6366;
+        }
+        .main-content {
+            display: flex;
+            width: 90%;
+            justify-content: space-between;
+        }
+        .input-area {
+            width: 45%;
+            text-align: center;
+        }
+        .input-text {
+            width: 100%;
+            height: 200px;
+            padding: 20px;
+            background-color: #E3F4F6;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Segoe UI';
+            resize: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+        .input-text::placeholder {
+            font-style: italic;
+        }
+        .detect-button {
+            padding: 10px 20px;
+            background-color: #5D8689;
+            color: #E3F4F6;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .detect-button:hover {
+            background-color: #5D8689;
+        }
+        .detect-button:disabled {
+            background-color: #3a6366;
+            cursor: not-allowed;
+        }
+        .upload-button {
+            margin-top: 10px;
+        }
+        .analysis-section {
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+        }
+        .result-box, .analysis-box {
+            background-color: #E3F4F6;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-family: 'Segoe UI';
+        }
+        .result-text, .analysis-box h2 {
+            font-size: 18px;
+            color: #5D8689;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+        }
+        .analysis-box p {
+            color: #555555;
+            font-size: 16px;
+        }
+        .loading-spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #5D8689;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            display: block;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .analysis-box {
+            height: 600px; /* Increase height for detailed analysis */
+            max-height: 600px; /* Adjust max-height as needed */
+            overflow-y: auto; /* Enable vertical scrolling if content overflows */
+        }
+        .result-entry {
+            margin-bottom: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Fake News Detection</h1>
+        </header>
+        <div class="main-content">
+            <div class="input-area">
+                <form id="newsForm">
+                    <textarea class="input-text" name="article" placeholder="Enter or paste news text here and press 'Detect News'"></textarea>
+                    <div class="button-group">
+                        <button type="submit" class="detect-button">Detect News</button>
+                        <input type="file" class="upload-button" accept=".txt" id="fileInput">
+                    </div>
+                </form>
+            </div>
+            <div class="analysis-section">
+                <div id="resultsContainer">
+                    <div class="result-entry">
+                        <div class="result-box">
+                            <p class="result-text">Result: </p>
+                            <p class="probability-real">Probability of being Real News: </p>
+                            <p class="probability-fake">Probability of being Fake News: </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="analysis-box">
+                    <h2>Detailed Analysis</h2>
+                    <iframe id="explanationFrame"></iframe>
+                    <div id="explanation">
+                        <!-- Loading spinner will be displayed here -->
+                        <div id="loadingSpinner" class="loading-spinner" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.querySelector('.input-text').value = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    document.getElementById('newsForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const detectButton = document.querySelector('.detect-button');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const resultText = document.querySelector('.result-text');
+        const probabilityReal = document.querySelector('.probability-real');
+        const probabilityFake = document.querySelector('.probability-fake');
+        const explanationFrame = document.getElementById('explanationFrame');
+
+        detectButton.disabled = true;
+        detectButton.textContent = 'Detecting...';
+        loadingSpinner.style.display = 'inline-block';
+
+        fetch('/predict', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            resultText.textContent = `Result: ${data.prediction}`;
+            probabilityReal.textContent = `Probability of being Real News: ${data.probability_real.toFixed(2)}`;
+            probabilityFake.textContent = `Probability of being Fake News: ${data.probability_fake.toFixed(2)}`;
+            const iframeDoc = explanationFrame.contentDocument || explanationFrame.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(data.explanation);
+            iframeDoc.close();
+
+            detectButton.disabled = false;
+            detectButton.textContent = 'Detect News';
+            loadingSpinner.style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            detectButton.disabled = false;
+            detectButton.textContent = 'Detect News';
+            loadingSpinner.style.display = 'none';
+        });
+    });
+    </script>
+</body>
+</html>
