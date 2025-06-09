@@ -16,16 +16,10 @@ This project uses Natural Language Processing (NLP) and a Convolutional Neural N
 ---
 
 ## 📁 Project Structure
-├── training_and_testing.ipynb # Model training & evaluation
+├── FakeNewsCNN_testing.ipynb # Model training
 
-├── app.py # Flask app for real-time detection
+├── FakeNewsCNN_training.ipynb # Model evaluation
 
 ├── templates/ # HTML UI template
-
-├── fake_news_model.h5 # Saved trained model
-
-├── tokenizer.pkl # Saved tokenizer
-
-├── requirements.txt # Python dependencies
 
 └── README.md # You're reading it!
